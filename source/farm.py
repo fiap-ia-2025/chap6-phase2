@@ -7,4 +7,4 @@ class Farm:
         self.agriculture_types = agriculture_types
 
     def get_city_state_full(self):
-        return self.city + ", " + self.state + ", " + "BR"
+        return self.city + ", " + self.state + ", " + "BRASIL"
