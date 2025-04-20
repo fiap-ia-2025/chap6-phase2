@@ -132,7 +132,7 @@ def main():
             city_choice = city_choice.upper()
             city_is_not_valid = not city_choice_is_valid(city_choice, state_choice)
 
-    # print_weather(city_choice, state_choice)
+    print_weather(city_choice, state_choice)
 
     choice = 0
 
