@@ -2,6 +2,7 @@ import requests
 import pandas as pd
 from geopy.geocoders import Nominatim
 from datetime import datetime, timedelta
+from requests import HTTPError
 from farm import Farm
 from agriculture_type import AgricultureType
 
@@ -12,8 +13,14 @@ def print_weather(city, state):
     city_full = city + ', ' + state + ', BR'
     url = "https://api.openweathermap.org/data/2.5/weather"
     params = {"q": city_full, "appid": API_KEY, "units": "metric", "lang": "pt_br"}
-    resp = requests.get(url, params=params)
-    resp.raise_for_status()
+
+    try:
+        resp = requests.get(url, params=params)
+        resp.raise_for_status()
+    except HTTPError:
+        print("Não foi possível buscar informações da temperatura na sua cidade, tente novamente em alguns minutos!\n")
+        return
+
     weather_data = resp.json()
 
     weekday_names = ("Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo")
@@ -59,9 +66,13 @@ def is_string(input_char):
     return not input_char.isdigit()
 
 def save_response_data_on_log_file(response):
-    arq = open("../files/search_weather_log.txt", "a")
-    arq.write(datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "," + response)
-    arq.close()
+    try:
+        arq = open("../files/search_weather_log.txt", "a")
+        arq.write("\n" + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "," + str(response.json()))
+        arq.close()
+    except Exception as e:
+        print(repr(e))
+        print("Não foi possível gravar o log da consulta!")
 
 def determine_irrigation_for_farm(farm):
 
@@ -70,14 +81,14 @@ def determine_irrigation_for_farm(farm):
     latitude = location.latitude
     longitude = location.longitude
 
-    # === 3. Define intervalo de datas: últimos 3 dias ===
+    #Define intervalo de datas: últimos 3 dias
     end = datetime.now() - timedelta(days=1)  # evita usar o dia atual que pode não ter dados
     start = end - timedelta(days=10)
 
     start_date = start.strftime('%Y-%m-%d')
     end_date = end.strftime('%Y-%m-%d')
 
-    # === 4. Monta a URL da API Open-Meteo ===
+    #Monta a URL da API Open-Meteo
     url = (
         f"https://archive-api.open-meteo.com/v1/archive?"
         f"latitude={latitude}&longitude={longitude}&"
@@ -85,28 +96,37 @@ def determine_irrigation_for_farm(farm):
         f"daily=precipitation_sum&timezone=America/Sao_Paulo"
     )
 
-    # === 5. Faz a requisição ===
-    response = requests.get(url)
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+    except HTTPError:
+        print("Não foi possível buscar o histórico de informações da temperatura na sua cidade, tente novamente em alguns minutos!\n")
+        return
+
+    save_response_data_on_log_file(response)
     data = response.json()
 
-    # === 6. Analisa os dados ===
+    #Analisa os dados
     days = data.get("daily", {}).get("time", [])
     rains = data.get("daily", {}).get("precipitation_sum", [])
 
-    print(f"\nPrecipitação nos últimos 3 dias em {farm.get_city_state_full()}:\n")
+    #Ordena dados em ordem descendente
+    data_sorted_desc = sorted(zip(days, rains), reverse=True)
 
     dry_days = 0
-    for dt, rain in zip(days, rains):
-        print(f"{dt}: {rain} mm")
+    for dt, rain in data_sorted_desc:
         if rain == 0 or rain is None:
             dry_days += 1
 
-    # === 7. Alerta ao produtor ===
-    if dry_days >= 3:
-        print("\nALERTA: Já são 3 dias sem chuva. Considere iniciar irrigação.")
-    else:
-        print(f"\nTotal de dias secos: {dry_days}")
+    print(f"Total de dias secos: {dry_days}")
 
+    #Alerta ao produtor
+    for agriculture_type in farm.agriculture_types:
+        if dry_days >= agriculture_type.max_days_without_irrigation():
+            if dry_days > 1:
+                print(f"\nALERTA: Há {dry_days} dias não chove. Considere iniciar irrigação para a plantação de {agriculture_type.describe()}.")
+            else:
+                print(f"\nALERTA: Há {dry_days} dia não chove. Considere iniciar irrigação para a plantação de {agriculture_type.describe()}.")
 
 def main():
 
@@ -150,17 +170,26 @@ def main():
 
     agriculture_types = [None] * qtd
 
-    for i in range(qtd):
+    valid_agriculture_types = tuple(item.value for item in AgricultureType)
+
+    input_valid = 0
+    while input_valid < qtd:
         print(f"{AgricultureType.SOYA.value} - {AgricultureType.SOYA.describe()}")
         print(f"{AgricultureType.SUGAR_CANE.value} - {AgricultureType.SUGAR_CANE.describe()}")
         print(f"{AgricultureType.COFFE.value} - {AgricultureType.COFFE.describe()}")
 
         value = int(input("Escolha uma das opções acima: "))
-        agriculture_types[i] = value
+        if value in agriculture_types:
+            print("Por favor, escolha uma opção ainda não selecionada!")
+        elif value not in valid_agriculture_types:
+            print(f"A opção selecionada precisar ser um dos valores: {valid_agriculture_types}")
+        else:
+            agriculture_types[input_valid] = AgricultureType(value)
+            input_valid = input_valid + 1
 
     farm = Farm(farm_name, city_choice, state_choice, agriculture_types)
 
-    print("Iniciando o monitoramento.")
+    print("Iniciando o monitoramento...")
 
     determine_irrigation_for_farm(farm)
 

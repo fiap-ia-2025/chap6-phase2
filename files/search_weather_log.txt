@@ -1,1 +1,2 @@
 data_hora,responses_weather
+2025-04-20 23:32:53,{'latitude': -16.133568, 'longitude': -47.943115, 'generationtime_ms': 0.050187110900878906, 'utc_offset_seconds': -10800, 'timezone': 'America/Sao_Paulo', 'timezone_abbreviation': 'GMT-3', 'elevation': 1011.0, 'daily_units': {'time': 'iso8601', 'precipitation_sum': 'mm'}, 'daily': {'time': ['2025-04-09', '2025-04-10', '2025-04-11', '2025-04-12', '2025-04-13', '2025-04-14', '2025-04-15', '2025-04-16', '2025-04-17', '2025-04-18', '2025-04-19'], 'precipitation_sum': [5.4, 9.5, 4.5, 1.0, 4.0, 33.1, 36.5, 0.9, 1.0, 6.9, None]}}

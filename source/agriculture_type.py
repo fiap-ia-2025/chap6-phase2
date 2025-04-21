@@ -23,3 +23,6 @@ class AgricultureType(Enum):
         if self == AgricultureType.COFFE:
             return 4
 
+    def max_days_without_irrigation(self):
+        return int(30 / self.water_per_month_necessary())
+
