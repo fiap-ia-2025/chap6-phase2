@@ -35,35 +35,39 @@ def print_weather(city, state):
     print(f"Temperatura máxima: {weather_data['main']['temp_max']}°C")
     print(f"Umidade: {weather_data['main']['humidity']}%")
 
+
 def state_choice_is_valid(state_choice):
     states = pd.read_csv("../files/states.csv")
-    states = states.fillna('') #Remove opções em branco
+    states = states.fillna('')  # Remove opções em branco
     states['State'] = states['SIGLA'].str.strip()
     states = states['State'].tolist()
 
     state_is_valid = state_choice in states
     if not state_is_valid:
-            print("\nO estado informado não existe!\n")
+        print("\nO estado informado não existe!\n")
 
     return state_is_valid
 
+
 def city_choice_is_valid(city_choice, state_choice):
     cities = pd.read_csv("../files/cities.csv")
-    cities = cities.fillna('') #Remove opções em branco
-    cities['City'] = cities['MUNICIPIO_TOM'].str.strip() + ", " +  cities['UF'].str.strip()
+    cities = cities.fillna('')  # Remove opções em branco
+    cities['City'] = cities['MUNICIPIO_TOM'].str.strip() + ", " + cities['UF'].str.strip()
     cities = cities['City'].tolist()
 
     city_and_state_choice = city_choice + ", " + state_choice
 
     city_and_state_is_valid = city_and_state_choice in cities
     if not city_and_state_is_valid:
-            print("\nA cidade informada não existe ou não pertence ao estado informado anteriormente!\n")
+        print("\nA cidade informada não existe ou não pertence ao estado informado anteriormente!\n")
     return city_and_state_is_valid
+
 
 def is_string(input_char):
     if input_char.isdigit():
         print("\nDigite apenas letras!\n")
     return not input_char.isdigit()
+
 
 def save_response_data_on_log_file(response):
     try:
@@ -74,21 +78,21 @@ def save_response_data_on_log_file(response):
         print(repr(e))
         print("Não foi possível gravar o log da consulta!")
 
-def determine_irrigation_for_farm(farm):
 
+def determine_irrigation_for_farm(farm):
     geolocator = Nominatim(user_agent="clima_app")
     location = geolocator.geocode(farm.get_city_state_full())
     latitude = location.latitude
     longitude = location.longitude
 
-    #Define intervalo de datas: últimos 3 dias
+    # Define intervalo de datas: últimos 3 dias
     end = datetime.now() - timedelta(days=1)  # evita usar o dia atual que pode não ter dados
     start = end - timedelta(days=10)
 
     start_date = start.strftime('%Y-%m-%d')
     end_date = end.strftime('%Y-%m-%d')
 
-    #Monta a URL da API Open-Meteo
+    # Monta a URL da API Open-Meteo
     url = (
         f"https://archive-api.open-meteo.com/v1/archive?"
         f"latitude={latitude}&longitude={longitude}&"
@@ -100,17 +104,18 @@ def determine_irrigation_for_farm(farm):
         response = requests.get(url)
         response.raise_for_status()
     except HTTPError:
-        print("Não foi possível buscar o histórico de informações da temperatura na sua cidade, tente novamente em alguns minutos!\n")
+        print(
+            "Não foi possível buscar o histórico de informações da temperatura na sua cidade, tente novamente em alguns minutos!\n")
         return
 
     save_response_data_on_log_file(response)
     data = response.json()
 
-    #Analisa os dados
+    # Analisa os dados
     days = data.get("daily", {}).get("time", [])
     rains = data.get("daily", {}).get("precipitation_sum", [])
 
-    #Ordena dados em ordem descendente
+    # Ordena dados em ordem descendente
     data_sorted_desc = sorted(zip(days, rains), reverse=True)
 
     dry_days = 0
@@ -120,23 +125,26 @@ def determine_irrigation_for_farm(farm):
 
     print(f"Total de dias secos: {dry_days}")
 
-    #Alerta ao produtor
+    # Alerta ao produtor
     for agriculture_type in farm.agriculture_types:
         if dry_days >= agriculture_type.max_days_without_irrigation():
             if dry_days > 1:
-                print(f"\nALERTA: Há {dry_days} dias não chove. Considere iniciar irrigação para a plantação de {agriculture_type.describe()}.")
+                print(
+                    f"\nALERTA: Há {dry_days} dias não chove. Considere iniciar irrigação para a plantação de {agriculture_type.describe()}.")
             else:
-                print(f"\nALERTA: Há {dry_days} dia não chove. Considere iniciar irrigação para a plantação de {agriculture_type.describe()}.")
+                print(
+                    f"\nALERTA: Há {dry_days} dia não chove. Considere iniciar irrigação para a plantação de {agriculture_type.describe()}.")
+
 
 def main():
-
     print("\nOlá, bem vindo ao Sistema de Controle de Irrigação com alerta por tempo sem chuva para sua fazenda!\n")
 
     state_is_not_valid = True
     state_choice = ''
 
     while state_is_not_valid:
-        state_choice = input("Para começar, digite a sigla do estado de sua Fazenda (ex: caso seja São Paulo, digite SP):\n")
+        state_choice = input(
+            "Para começar, digite a sigla do estado de sua Fazenda (ex: caso seja São Paulo, digite SP):\n")
 
         if is_string(state_choice):
             state_choice = state_choice.strip().upper()
@@ -157,7 +165,8 @@ def main():
     choice = 0
 
     while choice not in (1, 2):
-        choice = int(input("\nVocê deseja realizar o controle de irrigação da sua fazenda conosco (apenas café, soja ou cana de açúcar)? Digite uma das opções abaixo: \n1-Sim \n2-Não\n"))
+        choice = int(input(
+            "\nVocê deseja realizar o controle de irrigação da sua fazenda conosco (apenas café, soja ou cana de açúcar)? Digite uma das opções abaixo: \n1-Sim \n2-Não\n"))
         if choice not in (1, 2):
             print("Opção inválida!")
 
@@ -192,6 +201,7 @@ def main():
     print("Iniciando o monitoramento...")
 
     determine_irrigation_for_farm(farm)
+
 
 # Chama a função principal
 if __name__ == "__main__":
