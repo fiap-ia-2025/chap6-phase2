@@ -8,3 +8,15 @@ class Farm:
 
     def get_city_state_full(self):
         return self.city + ", " + self.state + ", " + "BRASIL"
+
+    def get_name(self):
+        return self.name
+
+    def get_city(self):
+        return self.city
+
+    def get_state(self):
+        return self.state
+
+    def get_agriculture_types(self):
+        return self.agriculture_types

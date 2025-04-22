@@ -5,10 +5,11 @@ from datetime import datetime, timedelta
 from requests import HTTPError
 from farm import Farm
 from agriculture_type import AgricultureType
+from repository import Repository
 
 API_KEY = "1c5de160d5299d773c6c2e8b4ce89279"
 
-
+#Imprime em tela informações de clima no momento para a cidade/estado escolhidos
 def print_weather(city, state):
     city_full = city + ', ' + state + ', BR'
     url = "https://api.openweathermap.org/data/2.5/weather"
@@ -35,7 +36,7 @@ def print_weather(city, state):
     print(f"Temperatura máxima: {weather_data['main']['temp_max']}°C")
     print(f"Umidade: {weather_data['main']['humidity']}%")
 
-
+#Verifica se o estado escolhido é válido olhando em um arquivo csv com todos os estados brasileiros
 def state_choice_is_valid(state_choice):
     states = pd.read_csv("../document/states.csv")
     states = states.fillna('')  # Remove opções em branco
@@ -48,7 +49,7 @@ def state_choice_is_valid(state_choice):
 
     return state_is_valid
 
-
+#Verifica se a cidade/estado escolhida é válida olhando em um arquivo csv com todos os municípios brasileiros
 def city_choice_is_valid(city_choice, state_choice):
     cities = pd.read_csv("../document/cities.csv")
     cities = cities.fillna('')  # Remove opções em branco
@@ -62,13 +63,13 @@ def city_choice_is_valid(city_choice, state_choice):
         print("\nA cidade informada não existe ou não pertence ao estado informado anteriormente!\n")
     return city_and_state_is_valid
 
-
+#Verificar se o input é uma string
 def is_string(input_char):
     if input_char.isdigit():
         print("\nDigite apenas letras!\n")
     return not input_char.isdigit()
 
-
+#Salva o response da consulta por precipitação usando o conteúdo de manipulação de arquivos
 def save_response_data_on_log_file(response):
     try:
         arq = open("../document/search_weather_log.txt", "a")
@@ -78,7 +79,7 @@ def save_response_data_on_log_file(response):
         print(repr(e))
         print("Não foi possível gravar o log da consulta!")
 
-
+#Determina se as plantações da fazenda necessitam de irrigação de acordo com a quantidade de dias sem chuva
 def determine_irrigation_for_farm(farm):
     geolocator = Nominatim(user_agent="clima_app")
     location = geolocator.geocode(farm.get_city_state_full())
@@ -187,18 +188,25 @@ def main():
         print(f"{AgricultureType.SUGAR_CANE.value} - {AgricultureType.SUGAR_CANE.describe()}")
         print(f"{AgricultureType.COFFE.value} - {AgricultureType.COFFE.describe()}")
 
-        value = int(input("Escolha uma das opções acima: "))
-        if value in agriculture_types:
-            print("Por favor, escolha uma opção ainda não selecionada!")
-        elif value not in valid_agriculture_types:
-            print(f"A opção selecionada precisar ser um dos valores: {valid_agriculture_types}")
-        else:
-            agriculture_types[input_valid] = AgricultureType(value)
-            input_valid = input_valid + 1
+        try:
+            value = int(input("Escolha uma das opções acima: "))
+            if value in agriculture_types:
+                print("Por favor, escolha uma opção ainda não selecionada!")
+            elif value not in valid_agriculture_types:
+                print(f"A opção selecionada precisar ser um dos valores: {valid_agriculture_types}")
+            else:
+                agriculture_types[input_valid] = AgricultureType(value)
+                input_valid = input_valid + 1
+        except Exception:
+            print("Valor inserido inválido")
 
     farm = Farm(farm_name, city_choice, state_choice, agriculture_types)
 
     print("Iniciando o monitoramento...")
+
+    repository = Repository()
+    farm_id = repository.save_farm(farm)
+    print(f"Fazenda salva, identificador = {farm_id}")
 
     determine_irrigation_for_farm(farm)
 
