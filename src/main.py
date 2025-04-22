@@ -37,7 +37,7 @@ def print_weather(city, state):
 
 
 def state_choice_is_valid(state_choice):
-    states = pd.read_csv("../files/states.csv")
+    states = pd.read_csv("../document/states.csv")
     states = states.fillna('')  # Remove opções em branco
     states['State'] = states['SIGLA'].str.strip()
     states = states['State'].tolist()
@@ -50,7 +50,7 @@ def state_choice_is_valid(state_choice):
 
 
 def city_choice_is_valid(city_choice, state_choice):
-    cities = pd.read_csv("../files/cities.csv")
+    cities = pd.read_csv("../document/cities.csv")
     cities = cities.fillna('')  # Remove opções em branco
     cities['City'] = cities['MUNICIPIO_TOM'].str.strip() + ", " + cities['UF'].str.strip()
     cities = cities['City'].tolist()
@@ -71,7 +71,7 @@ def is_string(input_char):
 
 def save_response_data_on_log_file(response):
     try:
-        arq = open("../files/search_weather_log.txt", "a")
+        arq = open("../document/search_weather_log.txt", "a")
         arq.write("\n" + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "," + str(response.json()))
         arq.close()
     except Exception as e:
